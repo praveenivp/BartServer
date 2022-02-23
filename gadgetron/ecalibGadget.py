@@ -11,7 +11,6 @@ import os
 import sys
 path = os.environ["TOOLBOX_PATH"] + "/python/"
 sys.path.append(path)
-import cfl
 from bart import bart
 
 def send_reconstructed_images(connection, data_array,acq_header):
@@ -43,44 +42,33 @@ def send_reconstructed_images(connection, data_array,acq_header):
     I=np.zeros((dims[0], dims[1], dims[2], dims[3]))
     print(dims)
     print("send_reconstructed_images2")
-    I = data_array[:, :, :, :,1]
-    base_header.slice = 0
-    base_header.image_type= ismrmrd.IMTYPE_COMPLEX
-    print(I.shape)
-    # print(base_header)
-    image_array = ismrmrd.image.Image.from_array(I, headers=base_header)
-    connection.send(image_array)
+    for slc in range(1):
+        for n in range(1):
+            for s in range(0, dims[4]):
+                I = data_array[:, :, :, :,s]
+                base_header.slice = 0
+                base_header.image_type= ismrmrd.IMTYPE_COMPLEX
+                #print(I.shape)
+                image_array = ismrmrd.image.Image.from_array(I, headers=base_header)
+                connection.send(image_array)
+                print("Images Successfully sent!")
 
 def ecalibGadget(connection):
    logging.info("Python reconstruction running - reading readout data")
+   h=connection.header
+   Bartcmd=(h.userParameters.userParameterString[0].value)
+   print(type(h.userParameters))
    start = time.time()
    counter = 0
-
    for acquisition in connection:
        for reconBit in acquisition:
            print(type(reconBit))
-           # reconBit.ref is the calibration for parallel imaging
-           # reconBit.data is the undersampled dataset
-           print('-----------------------')
-       # each of them include a specific header and the kspace data
-           print(type(reconBit.data.headers))
-           print(type(reconBit.data.data))
-
-           print(reconBit.data.headers.shape)
-           print(reconBit.data.data.shape)
-
-           repetition = reconBit.data.headers.flat[34].idx.repetition
-           print(repetition)
            try:
                print("calling BART")
                refdata=np.array(reconBit.data.data)
-            #    imsize=np.array([128,128,20])
-            #    refdata_pad=np.pad(refdata,(32,32,0,0))
-               im = bart(1, 'ecalib -m 2 -k 5',  refdata)
-               print(im.shape)
+               im = bart(1, Bartcmd,  refdata)
                reference_header=reconBit.data.headers.flat[34]
                send_reconstructed_images(connection,im,reference_header)
-               print(im.shape)
            except:
                print("issue with BART")
            
