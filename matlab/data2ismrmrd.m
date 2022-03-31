@@ -1,10 +1,15 @@
-function data2ismrmrd(data,BARTcmd, filename)
+function [pathFolder,filename]=data2ismrmrd(data,BARTcmd, filename)
+% [pathFolder,filename]=data2ismrmrd(data,BARTcmd, filename)
+%
+%data: Reference scan data [COIL x COL x LIN x PAR]
 
 if(nargin<2)
     filename = 'Calibdata.h5';
     BARTcmd ='ecalib -k 6 -t 0.00001 -m 2';
 end
 
+pathFolder=mfilename('fullpath');
+[pathFolder, ~, ~] = fileparts(pathFolder);
 % Create an empty ismrmrd dataset
 if exist(filename,'file')
     warning(['File ' filename ' already exists.  overwriting'])
@@ -13,6 +18,7 @@ end
 dset = ismrmrd.Dataset(filename);
 
 % Synthesize the object
+data=permute(data,[2 3 4 1 5]);
 [nX,nY,nZ,nCoils,nRep]=size(data);
 
 % It is very slow to append one acquisition at a time, so we're going
