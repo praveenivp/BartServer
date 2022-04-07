@@ -15,21 +15,25 @@ sKspace=twix.hdr.Phoenix.sKSpace;
 ImSize=[sKspace.lBaseResolution sKspace.lPhaseEncodingLines sKspace.lPartitions];
 calibdata=zeropad(calibdata,[size(calibdata,1) ImSize]);
 %% write calib file and sen it to bart/gadgetron
-
-calibfilename='Calibdata.h5';
-outfile='test_csm.h5';
- BARTcmd='ecalib -m 2 -k 7:7:7 -r 24:24:24';
+dtStr = datetime('now','TimeZone','local','Format','d_MMM_y_HH_mm_ss');
+calibfilename=fullfile(getenv('TEMP'),sprintf('Calibdata_%s.h5',dtStr));
+outfile=fullfile(getenv('TEMP'),sprintf('csm_%s.h5',dtStr));
+BARTcmd='ecalib -m 2 -k 6:6:6 -r 24:24:24';
 [pathFolder,calibfilename]=data2ismrmrd(calibdata,BARTcmd, calibfilename);
 
 
-cmdStr{1}=fullfile(pathFolder,'..\IsmrmrdClient-win10-x64-Release\gadgetron_ismrmrd_client ');
-cmdStr{2}=sprintf(' -f %s\\%s ',pathFolder,calibfilename);
+cmdStr{1}=fullfile(pathFolder,'..\\IsmrmrdClient-win10-x64-Release\\gadgetron_ismrmrd_client ');
+cmdStr{2}=sprintf(' -f %s ',calibfilename);
 cmdStr{3}=sprintf(' -C %s\\..\\gadgetron\\ecalib.xml ',pathFolder);
-cmdStr{4}=' -a 10.41.60.157 -p 9020 ';
+cmdStr{4}=' -a 10.41.60.157 -p 9002 ';
 cmdStr{5}=sprintf(' -o %s ',outfile);
 [status,cmdout] = system(strcat(cmdStr{:}));
 %% read the coil maps back
 [csm_test,header,file_info]=readH5File(outfile);
+
+%% Clean up
+delete(fullfile(getenv('TEMP'),'Calibdata_*.h5'))
+delete(fullfile(getenv('TEMP'),'csm_*.h5'))
 
 %% supporting functions
 function data_decorr=performNoiseDecorr(data,D)
