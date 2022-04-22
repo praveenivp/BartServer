@@ -4,7 +4,7 @@ import gadgetron
 import ismrmrd
 import logging
 import time
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 #BART import
 import os
