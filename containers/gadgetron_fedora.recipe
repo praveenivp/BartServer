@@ -1,0 +1,139 @@
+Bootstrap:docker
+From:fedora:35
+
+%pre
+    export PATH=$PATH:/usr/local/cuda/bin
+
+
+%post
+    sudo dnf -y update
+    sudo dnf -y groupinstall "Development Tools"
+
+    sudo dnf -y install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+    sudo dnf update -y
+    sudo dnf -y install xorg-x11-drv-nvidia-cuda
+    #sudo dnf module disable nvidia-driver
+    sudo dnf -y install 'dnf-command(config-manager)'
+    sudo dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora35/x86_64/cuda-fedora35.repo
+    sudo dnf -y install cuda
+    sudo dnf -y install 'dnf-command(config-manager)'
+    sudo dnf -y config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora35/x86_64/cuda-fedora35.repo
+    sudo dnf -y install cuda
+
+    sudo dnf -y groupinstall "Development Tools"
+    sudo dnf -y install lapack-devel openblas-devel cmake pugixml-devel fftw3-devel armadillo-devel hdf5-devel python3-devel rocksdb-devel\
+            libxml2-devel wget libxslt-devel gtest-devel gcc-c++ ninja-build  dcmtk-devel htop boost-devel ninja-build nano \
+            range-v3-devel boost-devel boost-static libcurl-devel gmock-devel glibc-langpack-en date-devel
+
+
+    mkdir /install_packages && cd /install_packages
+    wget https://github.com/nlohmann/json/archive/refs/tags/v3.10.1.tar.gz
+    tar -xf  v3.10.1.tar.gz  && rm v3.10.1.tar.gz
+    mkdir json-3.10.1/build && cd json-3.10.1/build
+    cmake -GNinja  -DCMAKE_BUILD_TYPE=Release ..
+    ninja
+    sudo ninja install
+
+
+    cd /install_packages
+    wget https://github.com/ismrmrd/ismrmrd/archive/refs/tags/v1.13.4.tar.gz
+    tar -xf  v1.13.4.tar.gz && rm v1.13.4.tar.gz
+    mkdir ismrmrd-1.13.4/build && cd ismrmrd-1.13.4/build
+    cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
+    ninja && sudo ninja install
+
+    cd /install_packages
+    wget https://github.com/ismrmrd/siemens_to_ismrmrd/archive/refs/tags/v1.2.10.tar.gz
+    tar -xf  v1.2.10.tar.gz && rm v1.2.10.tar.gz
+    mkdir siemens_to_ismrmrd-1.2.10/build && cd siemens_to_ismrmrd-1.2.10/build
+    cmake -GNinja  -DCMAKE_BUILD_TYPE=Release ..
+    ninja && sudo ninja install
+
+    pip3 install \
+    Cython \
+    matplotlib \
+    numpy \
+    opencv_python \
+    pydicom \
+    Pillow \
+    pyxb \
+    scikit-image \
+    scikit-learn \
+    scipy \
+    sympy \
+    tk-tools \
+    junitparser
+
+    pip3 install git+https://github.com/gadgetron/gadgetron-python.git
+
+    #ismrmrdviewer
+    sudo dnf -y install x11docker.noarch
+    pip3 install git+https://github.com/ismrmrd/ismrmrdviewer.git
+    pip3 install numpy --upgrade
+
+    #install bart
+    sudo dnf -y install libpng-devel atlas-devel
+    cd /install_packages/
+    wget https://github.com/mrirecon/bart/archive/refs/tags/v0.8.00.tar.gz
+    tar -xf v0.8.00.tar.gz && rm v0.8.00.tar.gz
+    TOOLBOX_PATH="/opt/bart"
+    mv ./bart-0.8.00/ ${TOOLBOX_PATH} &&  cd ${TOOLBOX_PATH}
+
+    echo "OPENBLAS=1" > Makefile.local
+    echo "CUDA=1" >> Makefile.local
+    echo "CUDA_BASE=\"/usr/local/cuda\"" >> Makefile.local
+    echo "CUDA_LIB= \"lib64\"" >> Makefile.local
+    make
+
+    # DICOM is always a pain
+    sudo dnf -y remove dcmtk-devel
+
+    #get new version of Go >=1.17
+    cd /install_packages/
+    wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+    tar -xf go1.20.3.linux-amd64.tar.gz && rm go1.20.3.linux-amd64.tar.gz
+    mv go/ /usr/local/
+    export PATH=$PATH:/usr/local/go/bin
+
+
+    #mrd storage server
+    cd /install_packages/
+    wget https://github.com/ismrmrd/mrd-storage-server/archive/refs/tags/v0.0.12.tar.gz
+    tar -xf v0.0.12.tar.gz && rm v0.0.12.tar.gz
+    cd mrd-storage-server-0.0.12
+    export GOPATH=/usr/local/go
+    go build
+    go install
+
+
+
+    # Gadgetron
+    cd /install_packages
+    #almost same as d869b54e8f0a6caecfd3e2ee51ca3f12397e21d0
+    git clone https://github.com/praveenivp/gadgetron.git
+    cd /install_packages/gadgetron
+    mkdir build && cd build
+    cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_COMPUTE_CAPABILITY=ALL -DUSE_CUDA=ON  .. && ninja
+    sudo ninja install
+
+%environment
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64/
+    export XDG_RUNTIME_DIR=""
+    export LANG=en_US.UTF-8
+    export LANGUAGE=en_US.UTF-8
+    export LC_COLLATE=C
+    export LC_CTYPE=en_US.UTF-8
+
+    export TOOLBOX_PATH="/opt/bart"
+    export PATH="${TOOLBOX_PATH}:$PATH"
+    export GOPATH="/usr/local/go"
+    export PATH=$PATH:${GOPATH}/bin
+    export PATH=$PATH:/usr/local/cuda/bin
+
+
+
+
+
+
+
+
